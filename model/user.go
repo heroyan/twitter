@@ -13,7 +13,7 @@ type User struct {
 }
 
 type Follow struct {
-	FollowerId int `json:"follower_id"`
-	FolloweeId int `json:"followee_id"`
-	CreateTime int `json:"create_time"`
+	FollowerId int `json:"follower_id" redis:"follower_id"`
+	FolloweeId int `json:"followee_id" redis:"followee_id"`
+	CreateTime int `json:"create_time" redis:"create_time"`
 }
