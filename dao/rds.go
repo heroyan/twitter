@@ -90,7 +90,7 @@ func (rd *RedisDao) AddUser(user *model.User) (err error) {
 	}
 	key = model.UinPrefix + fmt.Sprintf("%d", user.Id)
 	_, err = rd.rdb.HMSet(ctx, key, "id", user.Id, "name", user.Name, "user_name", user.UserName,
-		"passwd", user.Passwd, "last_login_time", user.LastLoginTime, "nick", user.Nick,
+		"passwd", user.Passwd, "last_login_time", user.LastLoginTime, "nick", user.Nick, "session_id", user.SessionId,
 		"age", user.Age, "create_time", user.CreateTime).Result()
 
 	return
@@ -128,21 +128,16 @@ func (rd *RedisDao) AddPost(post *model.Post) (err error) {
 	}
 
 	// add to the user's post list
+	// the newest one at the head
 	key = model.UserPostPrefix + fmt.Sprintf("%d", post.UserId)
-	_, err = rd.rdb.ZAdd(ctx, key, &redis.Z{Score: float64(post.CreateTime), Member: post.Id}).Result()
+	_, err = rd.rdb.LPush(ctx, key, post.Id).Result()
 
 	return
 }
 
-func (rd *RedisDao) GetPostByUser(userId, start, end, count int) (postList []*model.Post, err error) {
+func (rd *RedisDao) GetPostByUser(userId, start, count int) (postList []*model.Post, err error) {
 	key := model.UserPostPrefix + fmt.Sprintf("%d", userId)
-	postIds, err := rd.rdb.ZRangeByScore(ctx, key,
-		&redis.ZRangeBy{
-			Min:    fmt.Sprintf("%d", start),
-			Max:    fmt.Sprintf("%d", end),
-			Count:  int64(count),
-			Offset: 0,
-		}).Result()
+	postIds, err := rd.rdb.LRange(ctx, key, int64(start), int64(start+count)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +192,7 @@ func (rd *RedisDao) GetLikeNum(postId int) (int, error) {
 // GetCommentNum get number of comments
 func (rd *RedisDao) GetCommentNum(postId int) (int, error) {
 	key := model.PostCommentPrefix + fmt.Sprintf("%d", postId)
-	num, err := rd.rdb.SCard(ctx, key).Result()
+	num, err := rd.rdb.LLen(ctx, key).Result()
 	if err != nil {
 		return 0, err
 	}
@@ -231,15 +226,9 @@ func (rd *RedisDao) GetLikeUserByPost(postId int) ([]*model.User, error) {
 }
 
 // GetCommentByPost get comments by the post
-func (rd *RedisDao) GetCommentByPost(postId, start, end, count int) ([]*model.Comment, error) {
+func (rd *RedisDao) GetCommentByPost(postId, start, count int) ([]*model.Comment, error) {
 	key := model.PostCommentPrefix + fmt.Sprintf("%d", postId)
-	commentIds, err := rd.rdb.ZRangeByScore(ctx, key,
-		&redis.ZRangeBy{
-			Min:    fmt.Sprintf("%d", start),
-			Max:    fmt.Sprintf("%d", end),
-			Count:  int64(count),
-			Offset: 0,
-		}).Result()
+	commentIds, err := rd.rdb.LRange(ctx, key, int64(start), int64(start+count)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -277,31 +266,37 @@ func (rd *RedisDao) AddComment(comment *model.Comment) (err error) {
 	if err != nil {
 		return err
 	}
-	key := model.PostCommentPrefix + fmt.Sprintf("%d", comment.PostId)
-	_, err = rd.rdb.ZAdd(ctx, key, &redis.Z{
-		Score:  float64(comment.CreateTime),
-		Member: comment.Id,
-	}).Result()
+
+	// first add detail, then add id map
+	// the best way is to use reids pipeline
+	pipe := rd.rdb.Pipeline()
+	key := model.CommentDetailPrefix + fmt.Sprintf("%d", comment.Id)
+	pipe.HMSet(ctx, key, "id", comment.Id, "post_id", comment.PostId, "user_id", comment.UserId,
+		"content", comment.Content, "create_time", comment.CreateTime)
+
+	key = model.PostCommentPrefix + fmt.Sprintf("%d", comment.PostId)
+	pipe.LPush(ctx, key, comment.Id)
+	_, err = pipe.Exec(ctx)
 	if err != nil {
 		return err
 	}
-	key = model.CommentDetailPrefix + fmt.Sprintf("%d", comment.Id)
-	_, err = rd.rdb.HMSet(ctx, key, "id", comment.Id, "post_id", comment.PostId, "user_id", comment.UserId,
-		"content", comment.Content, "create_time", comment.CreateTime).Result()
 
 	return err
 }
 
 // AddStar someone star the post
 func (rd *RedisDao) AddStar(star *model.Star) error {
+	pipe := rd.rdb.Pipeline()
 	key := model.PostStarPrefix + fmt.Sprintf("%d", star.PostId)
-	_, err := rd.rdb.SAdd(ctx, key, star.UserId).Result()
+	pipe.SAdd(ctx, key, star.UserId)
+
+	key = model.UserStarPrefix + fmt.Sprintf("%d", star.UserId)
+	// add to someone's star list
+	pipe.ZAdd(ctx, key, &redis.Z{Score: float64(star.CreateTime), Member: star.PostId})
+	_, err := pipe.Exec(ctx)
 	if err != nil {
 		return err
 	}
-	// add to someone's star list
-	key = model.UserStarPrefix + fmt.Sprintf("%d", star.UserId)
-	_, err = rd.rdb.ZAdd(ctx, key, &redis.Z{Score: float64(star.CreateTime), Member: star.PostId}).Result()
 
 	return err
 }
@@ -395,6 +390,20 @@ func (rd *RedisDao) IsUserStarPost(userId, postId int) (bool, error) {
 	return rd.isModelPost(model.UserStarPrefix, userId, postId)
 }
 
+// IsUserNameExists is username exists
+func (rd *RedisDao) IsUserNameExists(userName string) (bool, error) {
+	key := model.UserPrefix + userName
+	_, err := rd.rdb.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return false, nil
+	}
+	if err != nil {
+		return true, err
+	}
+
+	return true, nil
+}
+
 // DelLike dislike the post
 func (rd *RedisDao) DelLike(userId, postId int) error {
 	key := model.PostLikePrefix + fmt.Sprintf("%d", postId)
@@ -412,7 +421,7 @@ func (rd *RedisDao) DelLike(userId, postId int) error {
 // DelComment delete the comment
 func (rd *RedisDao) DelComment(commentId, postId int) error {
 	key := model.PostCommentPrefix + fmt.Sprintf("%d", postId)
-	_, err := rd.rdb.SRem(ctx, key, commentId).Result()
+	_, err := rd.rdb.LRem(ctx, key, 1, commentId).Result()
 	if err != nil {
 		return err
 	}
@@ -432,7 +441,7 @@ func (rd *RedisDao) DelPost(userId, postId int) error {
 	}
 
 	key = model.UserPostPrefix + fmt.Sprintf("%d", userId)
-	_, err = rd.rdb.ZRem(ctx, key, postId).Result()
+	_, err = rd.rdb.LRem(ctx, key, 1, postId).Result()
 
 	return err
 }

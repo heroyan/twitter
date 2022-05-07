@@ -1,0 +1,5 @@
+{
+  "addr": "localhost:6379",
+  "passwd": "",
+  "db": 0
+}

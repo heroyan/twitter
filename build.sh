@@ -1,0 +1,1 @@
+go build -o twitter cmd/main.go

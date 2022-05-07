@@ -227,3 +227,36 @@ func TestRedisDao_DelLike(t *testing.T) {
 		convey.So(flag, convey.ShouldBeFalse)
 	})
 }
+
+func TestRedisDao_GetCommentByPost(t *testing.T) {
+	convey.Convey("GetCommentByPost test", t, func() {
+		post, err := addTestPost()
+		convey.So(err, convey.ShouldBeNil)
+
+		cmt := &model.Comment{
+			Id:         0,
+			PostId:     post.Id,
+			UserId:     testUserId,
+			Content:    "test content",
+			CreateTime: 0,
+		}
+		err = rd.AddComment(cmt)
+		convey.So(err, convey.ShouldBeNil)
+
+		cmt.Content = "test content2"
+		err = rd.AddComment(cmt)
+		convey.So(err, convey.ShouldBeNil)
+
+		cmtList, err := rd.GetCommentByPost(post.Id, 0, 100)
+		convey.So(err, convey.ShouldBeNil)
+		convey.So(len(cmtList), convey.ShouldEqual, 2)
+
+		// to del a comment
+		err = rd.DelComment(cmt.Id, post.Id)
+		convey.So(err, convey.ShouldBeNil)
+
+		num, err := rd.GetCommentNum(post.Id)
+		convey.So(err, convey.ShouldBeNil)
+		convey.So(num, convey.ShouldEqual, 1)
+	})
+}

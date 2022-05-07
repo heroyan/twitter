@@ -8,6 +8,7 @@ type User struct {
 	Name          string `json:"name" redis:"name"`
 	Gender        bool   `json:"gender" redis:"gender"`
 	Age           int    `json:"age" redis:"age"`
+	SessionId     string `json:"session_id" redis:"session_id"`
 	LastLoginTime int    `json:"last_login_time" redis:"last_login_time"`
 	CreateTime    int    `json:"create_time" redis:"create_time"`
 }

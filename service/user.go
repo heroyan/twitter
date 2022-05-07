@@ -1,18 +1,58 @@
 package service
 
 import (
+	"crypto/md5"
+	"errors"
+	"fmt"
+	"time"
+
 	"github.com/heroyan/twitter/dao"
 	"github.com/heroyan/twitter/model"
 )
 
 type UserService struct {
-	daoObj *dao.Dao
+	daoObj dao.Dao
 }
 
-func RegisterUser(user *model.User) (id int, err error) {
-	return id, err
+func NewUserService(obj dao.Dao) *UserService {
+	return &UserService{daoObj: obj}
 }
 
-func LoginUser(user *model.User) (err error) {
+func getMd5(str string) string {
+	hash := md5.Sum([]byte(str))
+	return fmt.Sprintf("%x", hash)
+}
+
+func (svc *UserService) RegisterUser(user *model.User) (id int, err error) {
+	// if username exists
+	exists, err := svc.daoObj.IsUserNameExists(user.UserName)
+	if err != nil {
+		return 0, err
+	}
+	if exists {
+		return 0, errors.New("username already exists")
+	}
+	// passwd must be hashed to store
+	user.Passwd = getMd5(user.Passwd)
+	// auto add register time
+	user.CreateTime = int(time.Now().Unix())
+	err = svc.daoObj.AddUser(user)
+
+	return user.Id, err
+}
+
+func (svc *UserService) LoginUser(user *model.User) (err error) {
+	// if username and passwd matches
+	u, err := svc.daoObj.GetUser(user.UserName)
+	if err != nil {
+		return err
+	}
+	if u == nil {
+		return errors.New("username or passwd wrong")
+	}
+	if u.Passwd != getMd5(user.Passwd) {
+		return errors.New("username or passwd wrong")
+	}
+
 	return err
 }
