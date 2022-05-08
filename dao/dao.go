@@ -53,4 +53,10 @@ type Dao interface {
 	DelComment(commentId, postId int) error
 	// DelPost delete the post
 	DelPost(userId, postId int) error
+	// GetSessionUser session resolve
+	GetSessionUser(sessionId string) (*model.User, error)
+	// SetSessionUser set session user
+	SetSessionUser(sessionId string, userId int, expire int) error
+	// DelSession delete the session
+	DelSession(sessionId string) error
 }

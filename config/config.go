@@ -18,3 +18,11 @@ func GetPasswd() string {
 func GetDB() int {
 	return viper.GetInt("db")
 }
+
+func GetSessionKey() string {
+	return viper.GetString("session_key")
+}
+
+func GetSessionAge() int {
+	return viper.GetInt("session_expire")
+}

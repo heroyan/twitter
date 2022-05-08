@@ -1,5 +1,7 @@
 {
   "addr": "localhost:6379",
   "passwd": "",
-  "db": 0
+  "db": 0,
+  "session_key": "twitter-session-id",
+  "session_expire": 86400
 }

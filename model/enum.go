@@ -5,7 +5,6 @@ const (
 	PostModel           = "post"
 	LikeModel           = "like"
 	CommentModel        = "comment"
-	StarModel           = "star"
 )
 
 const (
@@ -22,4 +21,5 @@ const (
 	PostCommentPrefix          = "post:comment:"
 	PostStarPrefix             = "post:star:"
 	CommentDetailPrefix        = "comment:detail:"
+	SessionPrefix              = "session:"
 )

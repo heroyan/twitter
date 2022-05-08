@@ -2,10 +2,12 @@ package dao
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/go-redis/redis/v8"
 	"github.com/heroyan/twitter/model"
 	"strconv"
+	"time"
 )
 
 // redis 实现
@@ -442,6 +444,52 @@ func (rd *RedisDao) DelPost(userId, postId int) error {
 
 	key = model.UserPostPrefix + fmt.Sprintf("%d", userId)
 	_, err = rd.rdb.LRem(ctx, key, 1, postId).Result()
+
+	return err
+}
+
+// GetSessionUser session resolve
+func (rd *RedisDao) GetSessionUser(sessionId string) (*model.User, error) {
+	key := model.SessionPrefix + sessionId
+	uid, err := rd.rdb.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return nil, errors.New("user not login")
+	} else if err != nil {
+		return nil, nil
+	}
+
+	userId, err := strconv.Atoi(uid)
+	if err != nil {
+		return nil, err
+	}
+
+	// check if session_id match
+	user, err := rd.GetUserByID(userId)
+	if user.SessionId != sessionId {
+		return nil, errors.New("user not login")
+	}
+
+	return user, err
+}
+
+// SetSessionUser set session user
+func (rd *RedisDao) SetSessionUser(sessionId string, userId, expire int) error {
+	pipe := rd.rdb.Pipeline()
+
+	key := model.SessionPrefix + sessionId
+	pipe.Set(ctx, key, userId, time.Second*time.Duration(expire))
+
+	key = model.UinPrefix + fmt.Sprintf("%d", userId)
+	pipe.HSet(ctx, key, "session_id", sessionId)
+
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
+// DelSession delete the session
+func (rd *RedisDao) DelSession(sessionId string) error {
+	key := model.SessionPrefix + sessionId
+	_, err := rd.rdb.Del(ctx, key).Result()
 
 	return err
 }

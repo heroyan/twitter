@@ -54,5 +54,21 @@ func (svc *UserService) LoginUser(user *model.User) (err error) {
 		return errors.New("username or passwd wrong")
 	}
 
+	// used to set session
+	user.Id = u.Id
+
 	return err
+}
+
+func (svc *UserService) Logout(sessionId string) (err error) {
+	return svc.daoObj.DelSession(sessionId)
+}
+
+func (svc *UserService) GetSessionUser(sessionId string) (*model.User, error) {
+	return svc.daoObj.GetSessionUser(sessionId)
+}
+
+// SetSessionUser set session user
+func (svc *UserService) SetSessionUser(sessionId string, userId, expire int) error {
+	return svc.daoObj.SetSessionUser(sessionId, userId, expire)
 }
