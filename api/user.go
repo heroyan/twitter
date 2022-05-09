@@ -1,10 +1,10 @@
 package api
 
 import (
-	"github.com/heroyan/twitter/config"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/heroyan/twitter/config"
 	"github.com/heroyan/twitter/model"
 )
 
@@ -48,7 +48,7 @@ func Login(c *gin.Context) {
 	// if already login, then do nothing
 	user2, _ := getSessionUser(c)
 	if user2 != nil && user2.UserName == user.UserName {
-		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "already login"})
 		return
 	}
 
@@ -94,4 +94,52 @@ func GetUserInfo(c *gin.Context) {
 		"nick":      user.Nick,
 		"name":      user.Name,
 	}})
+}
+
+// MyPost posted by myself
+func MyPost(c *gin.Context) {
+	user, isLogin := checkLogin(c)
+	if !isLogin {
+		return
+	}
+	start, size := getPagination(c)
+	postList, err := getUserSvc().GetPostByUser(user.Id, start, size)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": postList})
+}
+
+// MyStar posts stared by myself
+func MyStar(c *gin.Context) {
+	user, isLogin := checkLogin(c)
+	if !isLogin {
+		return
+	}
+	start, size := getPagination(c)
+	postList, err := getUserSvc().GetPostStarByUser(user.Id, start, size)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": postList})
+}
+
+// MyLike posts liked by myself
+func MyLike(c *gin.Context) {
+	user, isLogin := checkLogin(c)
+	if !isLogin {
+		return
+	}
+	start, size := getPagination(c)
+	postList, err := getUserSvc().GetPostLikeByUser(user.Id, start, size)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": postList})
 }

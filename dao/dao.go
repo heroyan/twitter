@@ -15,6 +15,8 @@ type Dao interface {
 	GetFollowerNum(userId int) (int, error)
 	// GetFolloweeNum get number of followee
 	GetFolloweeNum(userId int) (int, error)
+	// GetStarNum get number of stars
+	GetStarNum(postId int) (int, error)
 	// GetLikeNum get number of likes
 	GetLikeNum(postId int) (int, error)
 	// GetCommentNum get number of comments
@@ -26,9 +28,9 @@ type Dao interface {
 	// GetCommentByID get comment detail by id
 	GetCommentByID(commentId int) (*model.Comment, error)
 	// GetPostLikeByUser post liked by user
-	GetPostLikeByUser(userId, start, end, count int) ([]*model.Post, error)
+	GetPostLikeByUser(userId, start, count int) ([]*model.Post, error)
 	// GetPostStarByUser post  stared by user
-	GetPostStarByUser(userId, start, end, count int) ([]*model.Post, error)
+	GetPostStarByUser(userId, start, count int) ([]*model.Post, error)
 	// IsUserLikePost is user like the post
 	IsUserLikePost(userId, postId int) (bool, error)
 	// IsUserStarPost is user star the post
@@ -49,6 +51,8 @@ type Dao interface {
 	AddFollower(follow *model.Follow) error
 	// DelLike dislike the post
 	DelLike(userId, postId int) error
+	// DelStar un star the post
+	DelStar(userId, postId int) error
 	// DelComment delete the comment
 	DelComment(commentId, postId int) error
 	// DelPost delete the post

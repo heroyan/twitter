@@ -72,3 +72,15 @@ func (svc *UserService) GetSessionUser(sessionId string) (*model.User, error) {
 func (svc *UserService) SetSessionUser(sessionId string, userId, expire int) error {
 	return svc.daoObj.SetSessionUser(sessionId, userId, expire)
 }
+
+func (svc *UserService) GetPostByUser(userId, start, count int) ([]*model.Post, error) {
+	return svc.daoObj.GetPostByUser(userId, start, count)
+}
+
+func (svc *UserService) GetPostLikeByUser(userId, start, count int) ([]*model.Post, error) {
+	return svc.daoObj.GetPostLikeByUser(userId, start, count)
+}
+
+func (svc *UserService) GetPostStarByUser(userId, start, count int) ([]*model.Post, error) {
+	return svc.daoObj.GetPostStarByUser(userId, start, count)
+}

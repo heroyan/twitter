@@ -1,18 +1,27 @@
 package api
 
 import (
+	uuid "github.com/satori/go.uuid"
+	"net/http"
+	"regexp"
+	"strconv"
+	"unicode/utf8"
+
 	"github.com/gin-gonic/gin"
 	"github.com/heroyan/twitter/config"
 	"github.com/heroyan/twitter/dao"
 	"github.com/heroyan/twitter/model"
 	"github.com/heroyan/twitter/service"
-	uuid "github.com/satori/go.uuid"
-	"regexp"
 )
 
 func getUserSvc() *service.UserService {
 	daoObj := dao.NewRedisDao(config.GetAddr(), config.GetPasswd(), config.GetDB())
 	return service.NewUserService(daoObj)
+}
+
+func getPostSvc() *service.PostService {
+	daoObj := dao.NewRedisDao(config.GetAddr(), config.GetPasswd(), config.GetDB())
+	return service.NewPostService(daoObj)
 }
 
 // checkPassword 检查密码长度和组成
@@ -46,4 +55,52 @@ func getSessionUser(c *gin.Context) (*model.User, error) {
 	user, err := getUserSvc().GetSessionUser(sessionId)
 
 	return user, err
+}
+
+func checkPostContent(content string) bool {
+	if content == "" || utf8.RuneCountInString(content) > 144 {
+		return false
+	}
+
+	return true
+}
+
+func checkLogin(c *gin.Context) (*model.User, bool) {
+	user, err := getSessionUser(c)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return nil, false
+	}
+	if user == nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "not login"})
+		return nil, false
+	}
+
+	return user, true
+}
+
+func checkPostComment(comment *model.Comment) bool {
+	if comment.PostId == 0 || comment.Content == "" || utf8.RuneCountInString(comment.Content) > 100 {
+		return false
+	}
+
+	return true
+}
+
+func getPagination(c *gin.Context) (start, size int) {
+	page := c.Query("page")
+	limit := c.Query("limit")
+	// start非法默认从0开始，忽略err
+	pgNo, _ := strconv.Atoi(page)
+	if pgNo < 1 {
+		pgNo = 1
+	}
+	size, err := strconv.Atoi(limit)
+	// 最大获取不能超过100
+	if err != nil || size < 1 || size > 100 {
+		size = 10
+	}
+	start = (pgNo - 1) * size
+
+	return start, size
 }

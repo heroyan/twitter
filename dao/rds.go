@@ -139,7 +139,8 @@ func (rd *RedisDao) AddPost(post *model.Post) (err error) {
 
 func (rd *RedisDao) GetPostByUser(userId, start, count int) (postList []*model.Post, err error) {
 	key := model.UserPostPrefix + fmt.Sprintf("%d", userId)
-	postIds, err := rd.rdb.LRange(ctx, key, int64(start), int64(start+count)).Result()
+	// here count must minus 1, because redis lrange contain the min and max pos
+	postIds, err := rd.rdb.LRange(ctx, key, int64(start), int64(start+count-1)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +173,17 @@ func (rd *RedisDao) GetFollowerNum(userId int) (int, error) {
 // GetFolloweeNum get how many users I follow
 func (rd *RedisDao) GetFolloweeNum(userId int) (int, error) {
 	key := model.UserFolloweePrefix + fmt.Sprintf("%d", userId)
+	num, err := rd.rdb.SCard(ctx, key).Result()
+	if err != nil {
+		return 0, err
+	}
+
+	return int(num), nil
+}
+
+// GetStarNum get number of likes
+func (rd *RedisDao) GetStarNum(postId int) (int, error) {
+	key := model.PostStarPrefix + fmt.Sprintf("%d", postId)
 	num, err := rd.rdb.SCard(ctx, key).Result()
 	if err != nil {
 		return 0, err
@@ -230,7 +242,8 @@ func (rd *RedisDao) GetLikeUserByPost(postId int) ([]*model.User, error) {
 // GetCommentByPost get comments by the post
 func (rd *RedisDao) GetCommentByPost(postId, start, count int) ([]*model.Comment, error) {
 	key := model.PostCommentPrefix + fmt.Sprintf("%d", postId)
-	commentIds, err := rd.rdb.LRange(ctx, key, int64(start), int64(start+count)).Result()
+	// here count must minus 1, because redis lrange contain the min and max pos
+	commentIds, err := rd.rdb.LRange(ctx, key, int64(start), int64(start+count-1)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -252,12 +265,18 @@ func (rd *RedisDao) GetCommentByPost(postId, start, count int) ([]*model.Comment
 
 // AddLike someone likes the post
 func (rd *RedisDao) AddLike(like *model.Like) error {
-	key := model.PostLikePrefix + fmt.Sprintf("%d", like.PostId)
-	_, err := rd.rdb.SAdd(ctx, key, like.UserId).Result()
+	pipe := rd.rdb.Pipeline()
 
+	key := model.PostLikePrefix + fmt.Sprintf("%d", like.PostId)
+	pipe.SAdd(ctx, key, like.UserId).Result()
 	// add to someone's like list
 	key = model.UserLikePrefix + fmt.Sprintf("%d", like.UserId)
-	_, err = rd.rdb.ZAdd(ctx, key, &redis.Z{Score: float64(like.CreateTime), Member: like.PostId}).Result()
+	pipe.LPush(ctx, key, like.PostId)
+	// set like flag to true
+	key = model.IsLikePrefix + fmt.Sprintf("%d", like.UserId)
+	pipe.SetBit(ctx, key, int64(like.PostId), 1)
+
+	_, err := pipe.Exec(ctx)
 
 	return err
 }
@@ -279,9 +298,6 @@ func (rd *RedisDao) AddComment(comment *model.Comment) (err error) {
 	key = model.PostCommentPrefix + fmt.Sprintf("%d", comment.PostId)
 	pipe.LPush(ctx, key, comment.Id)
 	_, err = pipe.Exec(ctx)
-	if err != nil {
-		return err
-	}
 
 	return err
 }
@@ -289,16 +305,18 @@ func (rd *RedisDao) AddComment(comment *model.Comment) (err error) {
 // AddStar someone star the post
 func (rd *RedisDao) AddStar(star *model.Star) error {
 	pipe := rd.rdb.Pipeline()
+
+	// add to the post star list
 	key := model.PostStarPrefix + fmt.Sprintf("%d", star.PostId)
 	pipe.SAdd(ctx, key, star.UserId)
-
-	key = model.UserStarPrefix + fmt.Sprintf("%d", star.UserId)
 	// add to someone's star list
-	pipe.ZAdd(ctx, key, &redis.Z{Score: float64(star.CreateTime), Member: star.PostId})
+	key = model.UserStarPrefix + fmt.Sprintf("%d", star.UserId)
+	pipe.LPush(ctx, key, star.PostId)
+	// set star flag to true
+	key = model.IsStarPrefix + fmt.Sprintf("%d", star.UserId)
+	pipe.SetBit(ctx, key, int64(star.PostId), 1)
+
 	_, err := pipe.Exec(ctx)
-	if err != nil {
-		return err
-	}
 
 	return err
 }
@@ -331,15 +349,9 @@ func (rd *RedisDao) GetCommentByID(commentId int) (*model.Comment, error) {
 	return &comment, nil
 }
 
-func (rd *RedisDao) getPostByModel(modelType string, userId, start, end, count int) ([]*model.Post, error) {
+func (rd *RedisDao) getPostByModel(modelType string, userId, start, count int) ([]*model.Post, error) {
 	key := modelType + fmt.Sprintf("%d", userId)
-	postIds, err := rd.rdb.ZRangeByScore(ctx, key,
-		&redis.ZRangeBy{
-			Min:    fmt.Sprintf("%d", start),
-			Max:    fmt.Sprintf("%d", end),
-			Count:  int64(count),
-			Offset: 0,
-		}).Result()
+	postIds, err := rd.rdb.LRange(ctx, key, int64(start), int64(start+count-1)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -361,22 +373,24 @@ func (rd *RedisDao) getPostByModel(modelType string, userId, start, end, count i
 }
 
 // GetPostLikeByUser post liked by user
-func (rd *RedisDao) GetPostLikeByUser(userId, start, end, count int) ([]*model.Post, error) {
-	return rd.getPostByModel(model.UserLikePrefix, userId, start, end, count)
+func (rd *RedisDao) GetPostLikeByUser(userId, start, count int) ([]*model.Post, error) {
+	return rd.getPostByModel(model.UserLikePrefix, userId, start, count)
 }
 
 // GetPostStarByUser post  stared by user
-func (rd *RedisDao) GetPostStarByUser(userId, start, end, count int) ([]*model.Post, error) {
-	return rd.getPostByModel(model.UserStarPrefix, userId, start, end, count)
+func (rd *RedisDao) GetPostStarByUser(userId, start, count int) ([]*model.Post, error) {
+	return rd.getPostByModel(model.UserStarPrefix, userId, start, count)
 }
 
 func (rd *RedisDao) isModelPost(modelType string, userId, postId int) (bool, error) {
 	key := modelType + fmt.Sprintf("%d", userId)
-	_, err := rd.rdb.ZScore(ctx, key, fmt.Sprintf("%d", postId)).Result()
+	flag, err := rd.rdb.GetBit(ctx, key, int64(postId)).Result()
 	if err == redis.Nil {
 		return false, nil
 	} else if err != nil {
 		return false, err
+	} else if flag == 0 {
+		return false, nil
 	}
 
 	return true, nil
@@ -384,12 +398,12 @@ func (rd *RedisDao) isModelPost(modelType string, userId, postId int) (bool, err
 
 // IsUserLikePost is user like the post
 func (rd *RedisDao) IsUserLikePost(userId, postId int) (bool, error) {
-	return rd.isModelPost(model.UserLikePrefix, userId, postId)
+	return rd.isModelPost(model.IsLikePrefix, userId, postId)
 }
 
 // IsUserStarPost is user star the post
 func (rd *RedisDao) IsUserStarPost(userId, postId int) (bool, error) {
-	return rd.isModelPost(model.UserStarPrefix, userId, postId)
+	return rd.isModelPost(model.IsStarPrefix, userId, postId)
 }
 
 // IsUserNameExists is username exists
@@ -406,18 +420,32 @@ func (rd *RedisDao) IsUserNameExists(userName string) (bool, error) {
 	return true, nil
 }
 
-// DelLike dislike the post
-func (rd *RedisDao) DelLike(userId, postId int) error {
-	key := model.PostLikePrefix + fmt.Sprintf("%d", postId)
-	_, err := rd.rdb.SRem(ctx, key, userId).Result()
-	if err != nil {
-		return err
-	}
+func (rd *RedisDao) delCommon(postType, userType, isType string, userId, postId int) error {
+	pipe := rd.rdb.Pipeline()
 
-	key = model.UserLikePrefix + fmt.Sprintf("%d", userId)
-	_, err = rd.rdb.ZRem(ctx, key, postId).Result()
+	// remove from the post's like list
+	key := postType + fmt.Sprintf("%d", postId)
+	pipe.SRem(ctx, key, userId).Result()
+	// remove from the user's like list
+	key = userType + fmt.Sprintf("%d", userId)
+	pipe.LRem(ctx, key, 1, postId)
+	// set like flag to false
+	key = isType + fmt.Sprintf("%d", userId)
+	pipe.SetBit(ctx, key, int64(postId), 0)
+
+	_, err := pipe.Exec(ctx)
 
 	return err
+}
+
+// DelLike dislike the post
+func (rd *RedisDao) DelLike(userId, postId int) error {
+	return rd.delCommon(model.PostLikePrefix, model.UserLikePrefix, model.IsLikePrefix, userId, postId)
+}
+
+// DelStar un star the post
+func (rd *RedisDao) DelStar(userId, postId int) error {
+	return rd.delCommon(model.PostStarPrefix, model.UserStarPrefix, model.IsStarPrefix, userId, postId)
 }
 
 // DelComment delete the comment
@@ -477,7 +505,7 @@ func (rd *RedisDao) SetSessionUser(sessionId string, userId, expire int) error {
 	pipe := rd.rdb.Pipeline()
 
 	key := model.SessionPrefix + sessionId
-	pipe.Set(ctx, key, userId, time.Second*time.Duration(expire))
+	pipe.Set(ctx, key, userId, time.Duration(expire)*time.Second)
 
 	key = model.UinPrefix + fmt.Sprintf("%d", userId)
 	pipe.HSet(ctx, key, "session_id", sessionId)

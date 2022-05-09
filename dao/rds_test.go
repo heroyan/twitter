@@ -260,3 +260,12 @@ func TestRedisDao_GetCommentByPost(t *testing.T) {
 		convey.So(num, convey.ShouldEqual, 1)
 	})
 }
+
+func TestRedisDao_SetSessionUser(t *testing.T) {
+	convey.Convey("SetSessionUser test", t, func() {
+		session := "test-session-id"
+		err := rd.SetSessionUser(session, 8, 86400)
+		convey.So(err, convey.ShouldBeNil)
+	})
+
+}

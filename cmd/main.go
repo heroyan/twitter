@@ -3,13 +3,22 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/heroyan/twitter/api"
+	"github.com/heroyan/twitter/config"
 	"time"
 )
 
+var configFile = flag.String("conf", "./config.json", "--conf=filepath")
+var configType = flag.String("conf-type", "json", "conf-type=json")
+
 func main() {
+	err := config.LoadConfig(*configFile, *configType)
+	if err != nil {
+		panic("load config file:" + *configFile + ", type:" + *configType + ", error: " + err.Error())
+	}
 	router := gin.New()
 	router.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
 		// log format

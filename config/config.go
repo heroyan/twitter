@@ -2,9 +2,10 @@ package config
 
 import "github.com/spf13/viper"
 
-func init() {
-	viper.SetConfigFile("./config.json")
-	viper.SetConfigType("json")
+func LoadConfig(configFile, configType string) error {
+	viper.SetConfigFile(configFile)
+	viper.SetConfigType(configType)
+	return viper.ReadInConfig()
 }
 
 func GetAddr() string {
