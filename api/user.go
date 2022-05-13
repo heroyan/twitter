@@ -78,7 +78,11 @@ func Logout(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
 		return
 	}
-	c.Redirect(http.StatusTemporaryRedirect, "/")
+
+	c.SetCookie(config.GetSessionKey(), sessionId, -1,
+		"/", "localhost", false, true)
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 }
 
 func GetUserInfo(c *gin.Context) {
