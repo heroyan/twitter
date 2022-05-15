@@ -113,6 +113,10 @@ func (rd *RedisDao) GetPost(id int) (post *model.Post, err error) {
 		return nil, nil
 	}
 
+	rt.LikeNum, _ = rd.GetLikeNum(rt.Id)
+	rt.StarNum, _ = rd.GetStarNum(rt.Id)
+	rt.CommentNum, _ = rd.GetCommentNum(rt.Id)
+
 	return &rt, nil
 }
 

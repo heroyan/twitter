@@ -27,9 +27,6 @@ func GetPostInfo(c *gin.Context) {
 		return
 	}
 
-	likeNum, _ := svc.GetLikeNum(postId)
-	starNum, _ := svc.GetStarNum(postId)
-	commentNum, _ := svc.GetCommentNum(postId)
 	isLike := false
 	isStar := false
 	//if logged, then display if i like and star this post
@@ -40,9 +37,41 @@ func GetPostInfo(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": post,
-		"likeNum": likeNum, "starNum": starNum, "commentNum": commentNum,
 		"isLike": isLike, "isStar": isStar,
 	})
+}
+
+func getLikeNum(c *gin.Context) {
+	id := c.Query("id")
+	postId, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+	num, _ := getPostSvc().GetLikeNum(postId)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": num})
+}
+
+func getStarNum(c *gin.Context) {
+	id := c.Query("id")
+	postId, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+	num, _ := getPostSvc().GetStarNum(postId)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": num})
+}
+
+func getCommentNum(c *gin.Context) {
+	id := c.Query("id")
+	postId, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+	num, _ := getPostSvc().GetCommentNum(postId)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": num})
 }
 
 func GetPostComment(c *gin.Context) {

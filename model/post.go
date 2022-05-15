@@ -5,6 +5,9 @@ type Post struct {
 	Title      string `json:"title" redis:"title"`
 	Content    string `json:"content" redis:"content"`
 	UserId     int    `json:"user_id" redis:"user_id"`
+	LikeNum    int    `json:"like_num" redis:"like_num"`
+	StarNum    int    `json:"star_num" redis:"star_num"`
+	CommentNum int    `json:"comment_num" redis:"comment_num"`
 	CreateTime int    `json:"create_time" redis:"create_time"`
 }
 
