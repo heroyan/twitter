@@ -5,6 +5,7 @@ const (
 	PostModel           = "post"
 	LikeModel           = "like"
 	CommentModel        = "comment"
+	AllPostModel        = "allPost"
 )
 
 const (
@@ -16,6 +17,7 @@ const (
 	IsStarPrefix               = "user:is_star:"
 	UserLikePrefix             = "user:like:"
 	IsLikePrefix               = "user:is_like:"
+	UserTimelinePrefix         = "user:timeline:"
 	UinPrefix                  = "uin:"
 	GenPrefix                  = "gen:"
 	PostPrefix                 = "post:"

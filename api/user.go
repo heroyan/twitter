@@ -132,6 +132,21 @@ func MyStar(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": postList})
 }
 
+func MyFollow(c *gin.Context) {
+	user, isLogin := checkLogin(c)
+	if !isLogin {
+		return
+	}
+	start, size := getPagination(c)
+	postList, err := getUserSvc().GetPostFollowByUser(user.Id, start, size)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": postList})
+}
+
 // MyLike posts liked by myself
 func MyLike(c *gin.Context) {
 	user, isLogin := checkLogin(c)
@@ -140,6 +155,19 @@ func MyLike(c *gin.Context) {
 	}
 	start, size := getPagination(c)
 	postList, err := getUserSvc().GetPostLikeByUser(user.Id, start, size)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": postList})
+}
+
+func HotPost(c *gin.Context) {
+	user, _ := checkLogin(c)
+
+	_, size := getPagination(c)
+	postList, err := getUserSvc().GetHotPost(user.Id, size)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
 		return

@@ -84,3 +84,11 @@ func (svc *UserService) GetPostLikeByUser(userId, start, count int) ([]*model.Po
 func (svc *UserService) GetPostStarByUser(userId, start, count int) ([]*model.Post, error) {
 	return svc.daoObj.GetPostStarByUser(userId, start, count)
 }
+
+func (svc *UserService) GetPostFollowByUser(userId, start, count int) ([]*model.Post, error) {
+	return svc.daoObj.GetPostFollowByUser(userId, start, count)
+}
+
+func (svc *UserService) GetHotPost(userId, count int) ([]*model.Post, error) {
+	return svc.daoObj.GetHotPost(userId, count)
+}

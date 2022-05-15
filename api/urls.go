@@ -9,6 +9,8 @@ var GetUrls = map[string]gin.HandlerFunc{
 	"/api/user/myPost":       MyPost,
 	"/api/user/myLike":       MyLike,
 	"/api/user/myStar":       MyStar,
+	"/api/user/myFollow":     MyFollow,
+	"/api/user/hotPost":      HotPost,
 	"/api/post/info":         GetPostInfo,
 	"/api/post/likeNum":      getLikeNum,
 	"/api/post/starNum":      getStarNum,

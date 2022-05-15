@@ -31,6 +31,10 @@ type Dao interface {
 	GetPostLikeByUser(userId, start, count int) ([]*model.Post, error)
 	// GetPostStarByUser post  stared by user
 	GetPostStarByUser(userId, start, count int) ([]*model.Post, error)
+	// GetPostFollowByUser post followed by user
+	GetPostFollowByUser(userId, start, count int) ([]*model.Post, error)
+	// GetHotPost hot post recommende to user
+	GetHotPost(userId, count int) ([]*model.Post, error)
 	// IsUserLikePost is user like the post
 	IsUserLikePost(userId, postId int) (bool, error)
 	// IsUserStarPost is user star the post

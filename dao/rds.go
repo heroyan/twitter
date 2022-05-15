@@ -138,7 +138,32 @@ func (rd *RedisDao) AddPost(post *model.Post) (err error) {
 	key = model.UserPostPrefix + fmt.Sprintf("%d", post.UserId)
 	_, err = rd.rdb.LPush(ctx, key, post.Id).Result()
 
+	// add to allpost model, ignore the error or add a log info
+	rd.rdb.ZAdd(ctx, model.AllPostModel, &redis.Z{
+		Score:  float64(post.CreateTime),
+		Member: post.Id,
+	})
+
+	// add to the follower's timeline, this should be done background, we do this here for simple
+	idList, err := rd.GetFollowers(post.UserId)
+	if err != nil {
+		return err
+	}
+	for _, id := range idList {
+		key = model.UserTimelinePrefix + id
+		// ignore errors or add a log info
+		rd.rdb.LPush(ctx, key, post.Id)
+	}
+
 	return
+}
+
+// GetFollowers get who follow me
+func (rd *RedisDao) GetFollowers(userId int) ([]string, error) {
+	key := model.UserFollowerPrefix + fmt.Sprintf("%d", userId)
+	idList, err := rd.rdb.SMembers(ctx, key).Result()
+
+	return idList, err
 }
 
 func (rd *RedisDao) GetPostByUser(userId, start, count int) (postList []*model.Post, err error) {
@@ -148,19 +173,8 @@ func (rd *RedisDao) GetPostByUser(userId, start, count int) (postList []*model.P
 	if err != nil {
 		return nil, err
 	}
-	for _, postId := range postIds {
-		id, err := strconv.Atoi(postId)
-		if err != nil {
-			return nil, err
-		}
-		post, err := rd.GetPost(id)
-		if err != nil {
-			return nil, err
-		}
-		postList = append(postList, post)
-	}
 
-	return
+	return rd.getPostByIdList(postIds)
 }
 
 // GetFollowerNum get how many users follow me
@@ -360,20 +374,7 @@ func (rd *RedisDao) getPostByModel(modelType string, userId, start, count int) (
 		return nil, err
 	}
 
-	var postList []*model.Post
-	for _, postId := range postIds {
-		id, err := strconv.Atoi(postId)
-		if err != nil {
-			return nil, err
-		}
-		post, err := rd.GetPost(id)
-		if err != nil {
-			return nil, err
-		}
-		postList = append(postList, post)
-	}
-
-	return postList, nil
+	return rd.getPostByIdList(postIds)
 }
 
 // GetPostLikeByUser post liked by user
@@ -384,6 +385,11 @@ func (rd *RedisDao) GetPostLikeByUser(userId, start, count int) ([]*model.Post, 
 // GetPostStarByUser post  stared by user
 func (rd *RedisDao) GetPostStarByUser(userId, start, count int) ([]*model.Post, error) {
 	return rd.getPostByModel(model.UserStarPrefix, userId, start, count)
+}
+
+// GetPostFollowByUser post followed by user
+func (rd *RedisDao) GetPostFollowByUser(userId, start, count int) ([]*model.Post, error) {
+	return rd.getPostByModel(model.UserTimelinePrefix, userId, start, count)
 }
 
 func (rd *RedisDao) isModelPost(modelType string, userId, postId int) (bool, error) {
@@ -524,4 +530,32 @@ func (rd *RedisDao) DelSession(sessionId string) error {
 	_, err := rd.rdb.Del(ctx, key).Result()
 
 	return err
+}
+
+// GetHotPost hot post recommended to user
+func (rd *RedisDao) getPostByIdList(idList []string) ([]*model.Post, error) {
+	var postList []*model.Post
+	for _, postId := range idList {
+		id, err := strconv.Atoi(postId)
+		if err != nil {
+			return nil, err
+		}
+		post, err := rd.GetPost(id)
+		if err != nil {
+			return nil, err
+		}
+		postList = append(postList, post)
+	}
+
+	return postList, nil
+}
+
+// GetHotPost hot post recommended to user
+func (rd *RedisDao) GetHotPost(userId, count int) ([]*model.Post, error) {
+	idList, err := rd.rdb.ZRandMember(ctx, model.AllPostModel, count, false).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	return rd.getPostByIdList(idList)
 }
