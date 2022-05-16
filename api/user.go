@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/heroyan/twitter/config"
@@ -164,14 +165,196 @@ func MyLike(c *gin.Context) {
 }
 
 func HotPost(c *gin.Context) {
-	user, _ := checkLogin(c)
+	user, _ := getSessionUser(c)
+	userId := 0
+	if user != nil {
+		userId = user.Id
+	}
 
 	_, size := getPagination(c)
-	postList, err := getUserSvc().GetHotPost(user.Id, size)
+	postList, err := getUserSvc().GetHotPost(userId, size)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": postList})
+}
+
+func FollowerNum(c *gin.Context) {
+	id := c.Query("id")
+	userId, err := strconv.Atoi(id)
+	if err != nil {
+		// get current user's data, ignore errors
+		user, _ := getSessionUser(c)
+		if user != nil {
+			userId = user.Id
+		}
+	}
+
+	// ignore errors
+	num, _ := getUserSvc().GetFollowerNum(userId)
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": num})
+}
+
+func FolloweeNum(c *gin.Context) {
+	id := c.Query("id")
+	userId, err := strconv.Atoi(id)
+	if err != nil {
+		// get current user's data, ignore errors
+		user, _ := getSessionUser(c)
+		if user != nil {
+			userId = user.Id
+		}
+	}
+
+	// ignore errors
+	num, _ := getUserSvc().GetFolloweeNum(userId)
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": num})
+}
+
+func IsLike(c *gin.Context) {
+	user, isLogin := checkLogin(c)
+	if !isLogin {
+		return
+	}
+
+	var postIdList []int
+	idList := c.QueryArray("idList[]")
+	for _, id := range idList {
+		postId, _ := strconv.Atoi(id)
+		postIdList = append(postIdList, postId)
+	}
+
+	likes, err := getUserSvc().IsLike(user.Id, postIdList)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": likes})
+}
+
+func IsStar(c *gin.Context) {
+	user, isLogin := checkLogin(c)
+	if !isLogin {
+		return
+	}
+
+	var postIdList []int
+	idList := c.QueryArray("idList[]")
+	for _, id := range idList {
+		postId, _ := strconv.Atoi(id)
+		postIdList = append(postIdList, postId)
+	}
+
+	stars, err := getUserSvc().IsStar(user.Id, postIdList)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": stars})
+}
+
+func IsFollow(c *gin.Context) {
+	user, isLogin := checkLogin(c)
+	if !isLogin {
+		return
+	}
+
+	var userIdList []int
+	idList := c.QueryArray("idList[]")
+	for _, id := range idList {
+		uid, _ := strconv.Atoi(id)
+		userIdList = append(userIdList, uid)
+	}
+
+	follows, err := getUserSvc().IsFollow(user.Id, userIdList)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": follows})
+}
+
+func MyFollower(c *gin.Context) {
+	user, isLogin := checkLogin(c)
+	if !isLogin {
+		return
+	}
+	// get rand 100 ones
+	users, err := getUserSvc().GetFollowers(user.Id, 100)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": users})
+}
+
+func MyFollowee(c *gin.Context) {
+	user, isLogin := checkLogin(c)
+	if !isLogin {
+		return
+	}
+	// get rand 100 ones
+	users, err := getUserSvc().GetFollowees(user.Id, 100)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": users})
+}
+
+func AddFollow(c *gin.Context) {
+	user, isLogin := checkLogin(c)
+	if !isLogin {
+		return
+	}
+
+	var user2 model.User
+	if err := c.ShouldBindJSON(&user2); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	err := getUserSvc().AddFollower(&model.Follow{
+		FollowerId: user.Id,
+		FolloweeId: user2.Id,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": ""})
+}
+
+func UnFollow(c *gin.Context) {
+	user, isLogin := checkLogin(c)
+	if !isLogin {
+		return
+	}
+
+	var user2 model.User
+	if err := c.ShouldBindJSON(&user2); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	err := getUserSvc().UnFollow(&model.Follow{
+		FollowerId: user.Id,
+		FolloweeId: user2.Id,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": ""})
 }

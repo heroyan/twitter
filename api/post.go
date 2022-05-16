@@ -41,7 +41,7 @@ func GetPostInfo(c *gin.Context) {
 	})
 }
 
-func getLikeNum(c *gin.Context) {
+func GetLikeNum(c *gin.Context) {
 	id := c.Query("id")
 	postId, err := strconv.Atoi(id)
 	if err != nil {
@@ -52,7 +52,7 @@ func getLikeNum(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": num})
 }
 
-func getStarNum(c *gin.Context) {
+func GetStarNum(c *gin.Context) {
 	id := c.Query("id")
 	postId, err := strconv.Atoi(id)
 	if err != nil {
@@ -63,7 +63,7 @@ func getStarNum(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": num})
 }
 
-func getCommentNum(c *gin.Context) {
+func GetCommentNum(c *gin.Context) {
 	id := c.Query("id")
 	postId, err := strconv.Atoi(id)
 	if err != nil {

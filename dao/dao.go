@@ -35,10 +35,16 @@ type Dao interface {
 	GetPostFollowByUser(userId, start, count int) ([]*model.Post, error)
 	// GetHotPost hot post recommende to user
 	GetHotPost(userId, count int) ([]*model.Post, error)
+	// GetFollowers who follow me
+	GetFollowers(userId, count int) ([]*model.User, error)
+	// GetFollowees I follow who
+	GetFollowees(userId, count int) ([]*model.User, error)
 	// IsUserLikePost is user like the post
 	IsUserLikePost(userId, postId int) (bool, error)
 	// IsUserStarPost is user star the post
 	IsUserStarPost(userId, postId int) (bool, error)
+	// IsUserFollow is user follow the other
+	IsUserFollow(followerId, followeeId int) (bool, error)
 	// IsUserNameExists is username exists
 	IsUserNameExists(userName string) (bool, error)
 	// AddPost save post to storage
@@ -53,6 +59,8 @@ type Dao interface {
 	AddStar(star *model.Star) error
 	// AddFollower someone follows the other
 	AddFollower(follow *model.Follow) error
+	// UnFollow someone
+	UnFollow(follow *model.Follow) error
 	// DelLike dislike the post
 	DelLike(userId, postId int) error
 	// DelStar un star the post

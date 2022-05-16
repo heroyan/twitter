@@ -72,7 +72,7 @@ func checkLogin(c *gin.Context) (*model.User, bool) {
 		return nil, false
 	}
 	if user == nil {
-		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "not login"})
+		c.JSON(http.StatusOK, gin.H{"code": model.NeedLoginCode, "msg": "not login"})
 		return nil, false
 	}
 

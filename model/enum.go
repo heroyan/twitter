@@ -18,6 +18,7 @@ const (
 	UserLikePrefix             = "user:like:"
 	IsLikePrefix               = "user:is_like:"
 	UserTimelinePrefix         = "user:timeline:"
+	IsFollowPrefix             = "user:is_follow:"
 	UinPrefix                  = "uin:"
 	GenPrefix                  = "gen:"
 	PostPrefix                 = "post:"
@@ -26,4 +27,8 @@ const (
 	PostStarPrefix             = "post:star:"
 	CommentDetailPrefix        = "comment:detail:"
 	SessionPrefix              = "session:"
+)
+
+const (
+	NeedLoginCode int = 50008
 )

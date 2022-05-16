@@ -11,7 +11,7 @@ import (
 )
 
 var rd = NewRedisDao("localhost:6379", "", 0)
-var testUserId = 8
+var testUserId = 10
 var testUserName = "yanshuifa8"
 
 func TestNewRedisDao(t *testing.T) {

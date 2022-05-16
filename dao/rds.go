@@ -116,6 +116,11 @@ func (rd *RedisDao) GetPost(id int) (post *model.Post, err error) {
 	rt.LikeNum, _ = rd.GetLikeNum(rt.Id)
 	rt.StarNum, _ = rd.GetStarNum(rt.Id)
 	rt.CommentNum, _ = rd.GetCommentNum(rt.Id)
+	// ignore the errors
+	user, _ := rd.GetUserByID(rt.UserId)
+	if user != nil {
+		rt.UserNick = user.Nick
+	}
 
 	return &rt, nil
 }
@@ -145,7 +150,7 @@ func (rd *RedisDao) AddPost(post *model.Post) (err error) {
 	})
 
 	// add to the follower's timeline, this should be done background, we do this here for simple
-	idList, err := rd.GetFollowers(post.UserId)
+	idList, err := rd.GetAllFollowers(post.UserId)
 	if err != nil {
 		return err
 	}
@@ -158,12 +163,41 @@ func (rd *RedisDao) AddPost(post *model.Post) (err error) {
 	return
 }
 
-// GetFollowers get who follow me
-func (rd *RedisDao) GetFollowers(userId int) ([]string, error) {
+// GetAllFollowers get who follow me
+func (rd *RedisDao) GetAllFollowers(userId int) ([]string, error) {
 	key := model.UserFollowerPrefix + fmt.Sprintf("%d", userId)
+	// if there are a lot of followers, then it needs to pagination or get rand ones
 	idList, err := rd.rdb.SMembers(ctx, key).Result()
 
 	return idList, err
+}
+
+func (rd *RedisDao) getUserListByType(modelType string, userId, count int) ([]*model.User, error) {
+	key := modelType + fmt.Sprintf("%d", userId)
+	// if there are a lot of followers, then it needs to pagination or get rand ones
+	idList, err := rd.rdb.SRandMemberN(ctx, key, int64(count)).Result()
+	if err != nil {
+		return nil, err
+	}
+	var userList []*model.User
+	for _, id := range idList {
+		// ignore errors
+		uid, _ := strconv.Atoi(id)
+		user, _ := rd.GetUserByID(uid)
+		userList = append(userList, user)
+	}
+
+	return userList, nil
+}
+
+// GetFollowers get who follow me
+func (rd *RedisDao) GetFollowers(userId, count int) ([]*model.User, error) {
+	return rd.getUserListByType(model.UserFollowerPrefix, userId, count)
+}
+
+// GetFollowees get who follow me
+func (rd *RedisDao) GetFollowees(userId, count int) ([]*model.User, error) {
+	return rd.getUserListByType(model.UserFolloweePrefix, userId, count)
 }
 
 func (rd *RedisDao) GetPostByUser(userId, start, count int) (postList []*model.Post, err error) {
@@ -341,15 +375,36 @@ func (rd *RedisDao) AddStar(star *model.Star) error {
 
 // AddFollower someone follows the other
 func (rd *RedisDao) AddFollower(follow *model.Follow) error {
+	pipe := rd.rdb.Pipeline()
 	// add to my fans list
 	key := model.UserFollowerPrefix + fmt.Sprintf("%d", follow.FolloweeId)
-	_, err := rd.rdb.SAdd(ctx, key, follow.FollowerId).Result()
-	if err != nil {
-		return err
-	}
+	pipe.SAdd(ctx, key, follow.FollowerId)
 	// add to my followee list
 	key = model.UserFolloweePrefix + fmt.Sprintf("%d", follow.FollowerId)
-	_, err = rd.rdb.SAdd(ctx, key, follow.FolloweeId).Result()
+	pipe.SAdd(ctx, key, follow.FolloweeId)
+	// set follow flag
+	key = model.IsFollowPrefix + fmt.Sprintf("%d", follow.FollowerId)
+	pipe.SetBit(ctx, key, int64(follow.FolloweeId), 1)
+
+	_, err := pipe.Exec(ctx)
+
+	return err
+}
+
+// UnFollow unfollow someone
+func (rd *RedisDao) UnFollow(follow *model.Follow) error {
+	pipe := rd.rdb.Pipeline()
+	// remove from my fans list
+	key := model.UserFollowerPrefix + fmt.Sprintf("%d", follow.FolloweeId)
+	pipe.SRem(ctx, key, follow.FollowerId)
+	// remove from my followee list
+	key = model.UserFolloweePrefix + fmt.Sprintf("%d", follow.FollowerId)
+	pipe.SRem(ctx, key, follow.FolloweeId)
+	// unset follow flag
+	key = model.IsFollowPrefix + fmt.Sprintf("%d", follow.FollowerId)
+	pipe.SetBit(ctx, key, int64(follow.FolloweeId), 0)
+
+	_, err := pipe.Exec(ctx)
 
 	return err
 }
@@ -414,6 +469,11 @@ func (rd *RedisDao) IsUserLikePost(userId, postId int) (bool, error) {
 // IsUserStarPost is user star the post
 func (rd *RedisDao) IsUserStarPost(userId, postId int) (bool, error) {
 	return rd.isModelPost(model.IsStarPrefix, userId, postId)
+}
+
+// IsUserFollow is user follow the other
+func (rd *RedisDao) IsUserFollow(followerId, followeeId int) (bool, error) {
+	return rd.isModelPost(model.IsFollowPrefix, followerId, followeeId)
 }
 
 // IsUserNameExists is username exists

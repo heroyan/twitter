@@ -92,3 +92,66 @@ func (svc *UserService) GetPostFollowByUser(userId, start, count int) ([]*model.
 func (svc *UserService) GetHotPost(userId, count int) ([]*model.Post, error) {
 	return svc.daoObj.GetHotPost(userId, count)
 }
+
+func (svc *UserService) GetFollowerNum(userId int) (int, error) {
+	return svc.daoObj.GetFollowerNum(userId)
+}
+
+func (svc *UserService) GetFolloweeNum(userId int) (int, error) {
+	return svc.daoObj.GetFolloweeNum(userId)
+}
+
+func (svc *UserService) AddFollower(follow *model.Follow) error {
+	return svc.daoObj.AddFollower(follow)
+}
+
+func (svc *UserService) UnFollow(follow *model.Follow) error {
+	return svc.daoObj.UnFollow(follow)
+}
+
+func (svc *UserService) IsLike(userId int, postIdList []int) (map[int]bool, error) {
+	var ret = map[int]bool{}
+	for _, postId := range postIdList {
+		isLike, err := svc.daoObj.IsUserLikePost(userId, postId)
+		if err != nil {
+			return nil, err
+		}
+		ret[postId] = isLike
+	}
+
+	return ret, nil
+}
+
+func (svc *UserService) IsStar(userId int, postIdList []int) (map[int]bool, error) {
+	var ret = map[int]bool{}
+	for _, postId := range postIdList {
+		isLike, err := svc.daoObj.IsUserStarPost(userId, postId)
+		if err != nil {
+			return nil, err
+		}
+		ret[postId] = isLike
+	}
+
+	return ret, nil
+}
+
+func (svc *UserService) IsFollow(userId int, userIdList []int) (map[int]bool, error) {
+	var ret = map[int]bool{}
+	for _, uid := range userIdList {
+		isFollow, err := svc.daoObj.IsUserFollow(userId, uid)
+		if err != nil {
+			return nil, err
+		}
+		ret[uid] = isFollow
+	}
+
+	return ret, nil
+}
+
+func (svc *UserService) GetFollowers(userId, count int) ([]*model.User, error) {
+	return svc.daoObj.GetFollowers(userId, count)
+}
+
+func (svc *UserService) GetFollowees(userId, count int) ([]*model.User, error) {
+	return svc.daoObj.GetFollowees(userId, count)
+}
