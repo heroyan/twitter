@@ -49,7 +49,8 @@ func getSessionUser(c *gin.Context) (*model.User, error) {
 	sessionId, err := c.Cookie(config.GetSessionKey())
 
 	if err != nil {
-		return nil, err
+		// ignore error, mostly the session key not exist
+		return nil, nil
 	}
 
 	user, err := getUserSvc().GetSessionUser(sessionId)
@@ -65,14 +66,18 @@ func checkPostContent(content string) bool {
 	return true
 }
 
-func checkLogin(c *gin.Context) (*model.User, bool) {
+func checkLogin(c *gin.Context, needLogin bool) (*model.User, bool) {
 	user, err := getSessionUser(c)
+	code := 0
+	if needLogin {
+		code = model.NeedLoginCode
+	}
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": code, "data": gin.H{}, "msg": err.Error()})
 		return nil, false
 	}
 	if user == nil {
-		c.JSON(http.StatusOK, gin.H{"code": model.NeedLoginCode, "msg": "not login"})
+		c.JSON(http.StatusOK, gin.H{"code": code, "data": gin.H{}, "msg": "not login"})
 		return nil, false
 	}
 

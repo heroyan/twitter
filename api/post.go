@@ -30,7 +30,7 @@ func GetPostInfo(c *gin.Context) {
 	isLike := false
 	isStar := false
 	//if logged, then display if i like and star this post
-	user, _ := checkLogin(c)
+	user, _ := getSessionUser(c)
 	if user != nil {
 		isLike, _ = svc.IsUserLikePost(user.Id, postId)
 		isStar, _ = svc.IsUserStarPost(user.Id, postId)
@@ -92,7 +92,7 @@ func GetPostComment(c *gin.Context) {
 }
 
 func AddPost(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, true)
 	if !isLogin {
 		return
 	}
@@ -118,7 +118,7 @@ func AddPost(c *gin.Context) {
 }
 
 func AddComment(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, true)
 	if !isLogin {
 		return
 	}
@@ -144,7 +144,7 @@ func AddComment(c *gin.Context) {
 }
 
 func DelPost(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, true)
 	if !isLogin {
 		return
 	}
@@ -165,7 +165,7 @@ func DelPost(c *gin.Context) {
 }
 
 func DelComment(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, true)
 	if !isLogin {
 		return
 	}
@@ -186,7 +186,7 @@ func DelComment(c *gin.Context) {
 }
 
 func AddLike(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, true)
 	if !isLogin {
 		return
 	}
@@ -206,7 +206,7 @@ func AddLike(c *gin.Context) {
 }
 
 func AddStar(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, true)
 	if !isLogin {
 		return
 	}
@@ -226,7 +226,7 @@ func AddStar(c *gin.Context) {
 }
 
 func DelLike(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, true)
 	if !isLogin {
 		return
 	}
@@ -245,7 +245,7 @@ func DelLike(c *gin.Context) {
 }
 
 func DelStar(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, true)
 	if !isLogin {
 		return
 	}

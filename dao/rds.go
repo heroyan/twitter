@@ -309,6 +309,11 @@ func (rd *RedisDao) GetCommentByPost(postId, start, count int) ([]*model.Comment
 		if err != nil {
 			return nil, err
 		}
+		// get user nick name, ignore errors
+		user, _ := rd.GetUserByID(cmt.UserId)
+		if user != nil {
+			cmt.UserNick = user.Nick
+		}
 		commentList = append(commentList, &cmt)
 	}
 

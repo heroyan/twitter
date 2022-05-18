@@ -88,8 +88,14 @@ func Logout(c *gin.Context) {
 
 func GetUserInfo(c *gin.Context) {
 	user, err := getSessionUser(c)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+	if err != nil || user == nil {
+		// it's ok, but get empty user info
+		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{
+			"id":        "",
+			"user_name": "",
+			"nick":      "",
+			"name":      "",
+		}, "msg": ""})
 		return
 	}
 
@@ -103,7 +109,7 @@ func GetUserInfo(c *gin.Context) {
 
 // MyPost posted by myself
 func MyPost(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, false)
 	if !isLogin {
 		return
 	}
@@ -119,7 +125,7 @@ func MyPost(c *gin.Context) {
 
 // MyStar posts stared by myself
 func MyStar(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, false)
 	if !isLogin {
 		return
 	}
@@ -134,7 +140,7 @@ func MyStar(c *gin.Context) {
 }
 
 func MyFollow(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, false)
 	if !isLogin {
 		return
 	}
@@ -150,7 +156,7 @@ func MyFollow(c *gin.Context) {
 
 // MyLike posts liked by myself
 func MyLike(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, false)
 	if !isLogin {
 		return
 	}
@@ -216,7 +222,7 @@ func FolloweeNum(c *gin.Context) {
 }
 
 func IsLike(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, false)
 	if !isLogin {
 		return
 	}
@@ -238,7 +244,7 @@ func IsLike(c *gin.Context) {
 }
 
 func IsStar(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, false)
 	if !isLogin {
 		return
 	}
@@ -260,7 +266,7 @@ func IsStar(c *gin.Context) {
 }
 
 func IsFollow(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, false)
 	if !isLogin {
 		return
 	}
@@ -282,7 +288,7 @@ func IsFollow(c *gin.Context) {
 }
 
 func MyFollower(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, false)
 	if !isLogin {
 		return
 	}
@@ -297,7 +303,7 @@ func MyFollower(c *gin.Context) {
 }
 
 func MyFollowee(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, false)
 	if !isLogin {
 		return
 	}
@@ -312,7 +318,7 @@ func MyFollowee(c *gin.Context) {
 }
 
 func AddFollow(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, true)
 	if !isLogin {
 		return
 	}
@@ -336,7 +342,7 @@ func AddFollow(c *gin.Context) {
 }
 
 func UnFollow(c *gin.Context) {
-	user, isLogin := checkLogin(c)
+	user, isLogin := checkLogin(c, true)
 	if !isLogin {
 		return
 	}
