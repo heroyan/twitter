@@ -64,6 +64,10 @@ func (svc *UserService) Logout(sessionId string) (err error) {
 	return svc.daoObj.DelSession(sessionId)
 }
 
+func (svc *UserService) GetUser(userId int) (*model.User, error) {
+	return svc.daoObj.GetUserByID(userId)
+}
+
 func (svc *UserService) GetSessionUser(sessionId string) (*model.User, error) {
 	return svc.daoObj.GetSessionUser(sessionId)
 }

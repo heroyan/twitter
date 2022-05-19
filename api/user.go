@@ -87,7 +87,7 @@ func Logout(c *gin.Context) {
 }
 
 func GetUserInfo(c *gin.Context) {
-	user, err := getSessionUser(c)
+	user, err := getUserSvc().GetUser(getUserId(c))
 	if err != nil || user == nil {
 		// it's ok, but get empty user info
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{
@@ -107,14 +107,10 @@ func GetUserInfo(c *gin.Context) {
 	}})
 }
 
-// MyPost posted by myself
+// MyPost posted by other userId or by myself
 func MyPost(c *gin.Context) {
-	user, isLogin := checkLogin(c, false)
-	if !isLogin {
-		return
-	}
 	start, size := getPagination(c)
-	postList, err := getUserSvc().GetPostByUser(user.Id, start, size)
+	postList, err := getUserSvc().GetPostByUser(getUserId(c), start, size)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
 		return
@@ -188,35 +184,15 @@ func HotPost(c *gin.Context) {
 }
 
 func FollowerNum(c *gin.Context) {
-	id := c.Query("id")
-	userId, err := strconv.Atoi(id)
-	if err != nil {
-		// get current user's data, ignore errors
-		user, _ := getSessionUser(c)
-		if user != nil {
-			userId = user.Id
-		}
-	}
-
 	// ignore errors
-	num, _ := getUserSvc().GetFollowerNum(userId)
+	num, _ := getUserSvc().GetFollowerNum(getUserId(c))
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": num})
 }
 
 func FolloweeNum(c *gin.Context) {
-	id := c.Query("id")
-	userId, err := strconv.Atoi(id)
-	if err != nil {
-		// get current user's data, ignore errors
-		user, _ := getSessionUser(c)
-		if user != nil {
-			userId = user.Id
-		}
-	}
-
 	// ignore errors
-	num, _ := getUserSvc().GetFolloweeNum(userId)
+	num, _ := getUserSvc().GetFolloweeNum(getUserId(c))
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": num})
 }

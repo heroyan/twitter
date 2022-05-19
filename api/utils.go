@@ -109,3 +109,17 @@ func getPagination(c *gin.Context) (start, size int) {
 
 	return start, size
 }
+
+func getUserId(c *gin.Context) int {
+	id := c.Query("id")
+	userId, err := strconv.Atoi(id)
+	if err != nil {
+		// get current user's data, ignore errors
+		user, _ := getSessionUser(c)
+		if user != nil {
+			userId = user.Id
+		}
+	}
+
+	return userId
+}
