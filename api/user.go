@@ -346,13 +346,17 @@ func UpdateInfo(c *gin.Context) {
 	if !isLogin {
 		return
 	}
-	nick, exist := c.GetQuery("nick")
-	if exist {
-		user.Nick = nick
+
+	var user2 model.User
+	if err := c.ShouldBindJSON(&user2); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
 	}
-	name, exist := c.GetQuery("name")
-	if exist {
-		user.Name = name
+	if user2.Nick != "" {
+		user.Nick = user2.Nick
+	}
+	if user2.Name != "" {
+		user.Name = user2.Name
 	}
 
 	err := getUserSvc().UpdateUser(user)
