@@ -80,20 +80,24 @@ func (rd *RedisDao) generateId(modelType string) (int, error) {
 }
 
 func (rd *RedisDao) AddUser(user *model.User) (err error) {
-	user.Id, err = rd.generateId(model.UserModel)
-	if err != nil {
-		return err
+	if user.Id == 0 {
+		user.Id, err = rd.generateId(model.UserModel)
+		if err != nil {
+			return err
+		}
 	}
 
+	pipe := rd.rdb.Pipeline()
 	key := model.UserPrefix + user.UserName
-	_, err = rd.rdb.Set(ctx, key, user.Id, 0).Result()
-	if err != nil {
-		return err
-	}
+	pipe.Set(ctx, key, user.Id, 0)
+
 	key = model.UinPrefix + fmt.Sprintf("%d", user.Id)
-	_, err = rd.rdb.HMSet(ctx, key, "id", user.Id, "name", user.Name, "user_name", user.UserName,
+	pipe.HMSet(ctx, key, "id", user.Id, "name", user.Name, "user_name", user.UserName,
 		"passwd", user.Passwd, "last_login_time", user.LastLoginTime, "nick", user.Nick, "session_id", user.SessionId,
-		"age", user.Age, "create_time", user.CreateTime).Result()
+		"age", user.Age, "create_time", user.CreateTime)
+
+	//ignore results
+	_, err = pipe.Exec(ctx)
 
 	return
 }

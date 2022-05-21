@@ -30,6 +30,7 @@ var PostUrls = map[string]gin.HandlerFunc{
 	"/api/user/login":      Login,
 	"/api/user/addFollow":  AddFollow,
 	"/api/user/unFollow":   UnFollow,
+	"/api/user/updateInfo": UpdateInfo,
 	"/api/post/addPost":    AddPost,
 	"/api/post/addComment": AddComment,
 	"/api/post/addLike":    AddLike,

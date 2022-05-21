@@ -41,6 +41,10 @@ func (svc *UserService) RegisterUser(user *model.User) (id int, err error) {
 	return user.Id, err
 }
 
+func (svc *UserService) UpdateUser(user *model.User) error {
+	return svc.daoObj.AddUser(user)
+}
+
 func (svc *UserService) LoginUser(user *model.User) (err error) {
 	// if username and passwd matches
 	u, err := svc.daoObj.GetUser(user.UserName)

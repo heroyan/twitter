@@ -340,3 +340,26 @@ func UnFollow(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": ""})
 }
+
+func UpdateInfo(c *gin.Context) {
+	user, isLogin := checkLogin(c, true)
+	if !isLogin {
+		return
+	}
+	nick, exist := c.GetQuery("nick")
+	if exist {
+		user.Nick = nick
+	}
+	name, exist := c.GetQuery("name")
+	if exist {
+		user.Name = name
+	}
+
+	err := getUserSvc().UpdateUser(user)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": ""})
+}
